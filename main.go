@@ -1,59 +1,31 @@
 package main
 
 import (
-	"flag"
+	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
-
-	pb "gopkg.in/cheggaaa/pb.v1"
 )
 
+func remove(path string, destDir string) error {
+	return os.Rename(path, filepath.Join(destDir, filepath.Base(path)))
+}
+
 func main() {
-	directories := []string{}
-	files := []string{}
-
-	root := os.Args[1]
-
-	flag.Parse()
-
-	if root == "" {
-		flag.Usage()
-		return
+	if len(os.Args) < 2 {
+		fmt.Fprintf(os.Stderr, "move files/directories into %v, like mv unix command\n", os.TempDir())
+		fmt.Fprintf(os.Stderr, "usage: %v file1|dir1 [file2|dir2 ...]\n", os.Args[0])
 	}
-	root = filepath.Clean(root)
 
-	stats, err := os.Lstat(root)
+	dir, err := ioutil.TempDir("", "removed")
 	if err != nil {
-		panic(err)
+		fmt.Fprintf(os.Stderr, "could not create tempory directory\n")
+		os.Exit(1)
 	}
 
-	if stats.IsDir() {
-		filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
-			if info.IsDir() {
-				directories = append(directories, path)
-			} else {
-				files = append(files, path)
-			}
-			return nil
-		})
-	} else {
-		os.Remove(root)
-	}
-
-	bar := pb.StartNew(len(files) + len(directories))
-	for _, file := range files {
-		if err := os.Remove(file); err != nil {
-			panic(err)
+	for _, arg := range os.Args[1:] {
+		if err := remove(arg, dir); err != nil {
+			fmt.Fprintf(os.Stderr, "could not move %v into %v: %v\n", arg, dir, err)
 		}
-		bar.Increment()
 	}
-	for i := len(directories) - 1; i >= 0; i-- {
-		if err := os.Remove(directories[i]); err != nil {
-
-			panic(err)
-		}
-		bar.Increment()
-	}
-	bar.Finish()
-
 }
