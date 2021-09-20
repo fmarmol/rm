@@ -8,6 +8,15 @@ import (
 )
 
 func remove(path string, destDir string) error {
+	_, err := os.Stat(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			fmt.Fprintf(os.Stderr, "file/directory %v does not exist.\n", path)
+			return nil
+		}
+		return err
+	}
+
 	return os.Rename(path, filepath.Join(destDir, filepath.Base(path)))
 }
 
