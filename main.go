@@ -35,6 +35,8 @@ func main() {
 	for _, arg := range os.Args[1:] {
 		if err := remove(arg, dir); err != nil {
 			fmt.Fprintf(os.Stderr, "could not move %v into %v: %v\n", arg, dir, err)
+		} else {
+			fmt.Println("move file or dir:", arg, "to", dir)
 		}
 	}
 }
