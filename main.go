@@ -5,6 +5,8 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+
+	"github.com/spf13/pflag"
 )
 
 func remove(path string, destDir string) error {
@@ -20,23 +22,53 @@ func remove(path string, destDir string) error {
 	return os.Rename(path, filepath.Join(destDir, filepath.Base(path)))
 }
 
+const prefix = "removed"
+
+func cleanCmd(arg string) error {
+	return os.RemoveAll(arg)
+}
+
 func main() {
-	if len(os.Args) < 2 {
+	clean := pflag.Bool("clean", false, "definitively remove args")
+	pflag.Parse()
+	args := pflag.Args()
+	if len(args) < 1 {
 		fmt.Fprintf(os.Stderr, "move files/directories into %v, like mv unix command\n", os.TempDir())
 		fmt.Fprintf(os.Stderr, "usage: %v file1|dir1 [file2|dir2 ...]\n", os.Args[0])
 	}
 
-	dir, err := ioutil.TempDir("", "removed")
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "could not create tempory directory\n")
-		os.Exit(1)
+	var dir string
+
+	if !(*clean) {
+		var err error
+		dir, err = ioutil.TempDir("", prefix)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "could not create tempory directory\n")
+			os.Exit(1)
+		}
 	}
 
-	for _, arg := range os.Args[1:] {
-		if err := remove(arg, dir); err != nil {
-			fmt.Fprintf(os.Stderr, "could not move %v into %v: %v\n", arg, dir, err)
-		} else {
-			fmt.Println("move file or dir:", arg, "to", dir)
+	for _, arg := range args {
+		var err error
+		var callback func()
+
+		switch *clean {
+		case true:
+			err = cleanCmd(arg)
+			callback = func() {
+				fmt.Println("delete file or dir:", arg)
+			}
+		case false:
+			err = remove(arg, dir)
+			callback = func() {
+				fmt.Println("move file or dir:", arg, "to", dir)
+			}
 		}
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "could not remove %v : %v\n", arg, err)
+		} else {
+			callback()
+		}
+
 	}
 }
