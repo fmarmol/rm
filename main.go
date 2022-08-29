@@ -30,6 +30,8 @@ func cleanCmd(arg string) error {
 
 func main() {
 	clean := pflag.Bool("clean", false, "definitively remove args")
+	pflag.BoolP("recursive", "r", false, "just to be compliant with original rm")
+	pflag.BoolP("force", "f", false, "just to be compliant with original rm")
 	pflag.Parse()
 	args := pflag.Args()
 	if len(args) < 1 {
